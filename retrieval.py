@@ -7,6 +7,7 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from sentence_transformers import CrossEncoder
+from logger import logger
 
 class LocalHybridRerankRetriever(BaseRetriever):
     vectorstore: Chroma
@@ -22,6 +23,7 @@ class LocalHybridRerankRetriever(BaseRetriever):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        logger.info(f"Initializing LocalHybridRerankRetriever with model: {self.rerank_model_name}")
         self._rerank_model = CrossEncoder(self.rerank_model_name)
         self._initialize_bm25()
 
@@ -34,8 +36,9 @@ class LocalHybridRerankRetriever(BaseRetriever):
             ]
             self._bm25_retriever = BM25Retriever.from_documents(documents)
             self._bm25_retriever.k = 10
+            logger.info(f"BM25 initialized with {len(documents)} documents.")
         else:
-            print("Warning: No documents found in vectorstore to initialize BM25.")
+            logger.warning("No documents found in vectorstore to initialize BM25.")
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun = None

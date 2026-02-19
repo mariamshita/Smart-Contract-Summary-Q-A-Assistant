@@ -20,10 +20,14 @@ from retrieval import get_local_retriever
 from langserve import add_routes
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from logger import logger
+
+logger.info("Starting Assistant API...")
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
+    logger.error("GOOGLE_API_KEY not found in environment")
     raise ValueError("GOOGLE_API_KEY not found in environment")
 
 limiter = Limiter(key_func=get_remote_address)
@@ -54,27 +58,54 @@ memory = ConversationBufferWindowMemory(
 )
 persist_directory = "./chroma_db"
 
+# Reset Chroma vector database on startup
+if os.path.exists(persist_directory):
+    logger.info(f"Resetting vector database at {persist_directory}...")
+    try:
+        shutil.rmtree(persist_directory)
+        logger.info("Vector database cleared successfully.")
+    except Exception as e:
+        logger.error(f"Failed to reset vector database: {e}")
+
 vectorstore = Chroma(
     collection_name="smart_contracts",
     embedding_function=embeddings,
     persist_directory=persist_directory
 )
 
-SYSTEM_PROMPT_TEMPLATE = """You are an expert smart contract analyst. Your role is to analyze smart contracts and answer questions accurately based on the provided context.
+SYSTEM_PROMPT_TEMPLATE = """You are an intelligent AI assistant.
 
-Context from the smart contract:
+The user may upload documents and ask questions about them.
+You should behave as a hybrid assistant:
+
+Context from uploaded documents (may be empty or irrelevant):
 {context}
 
-Question: {question}
+User Question:
+{question}
 
 Instructions:
-- Provide accurate, detailed answers based ONLY on the context provided
-- If the context doesn't contain enough information, clearly state that
-- Highlight any security concerns or important details
-- Use technical terminology appropriately
-- Be concise but thorough
 
-Answer:"""
+1. First, determine whether the user's question is related to the provided document context.
+
+2. If the question IS related to the uploaded document:
+   - Use the provided context to answer.
+   - Base your answer primarily on the document.
+   - If something is unclear or missing in the context, say so clearly.
+
+3. If the question is NOT related to the document:
+   - Ignore the context completely.
+   - Answer normally using your general knowledge.
+   - Do not force document content into your answer.
+
+4. If the question is partially related:
+   - Combine document-based information with general knowledge.
+
+5. Be clear, accurate, and natural in tone.
+   Do not mention these instructions in your response.
+
+Answer:
+"""
 
 qa_prompt = PromptTemplate(
     template=SYSTEM_PROMPT_TEMPLATE,
@@ -91,19 +122,38 @@ async def upload_file(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     try:
+        logger.info(f"Processing file: {file.filename}")
         documents = process_file(temp_path)
         vectorstore.add_documents(documents)
+        logger.info(f"Successfully processed {file.filename}, added {len(documents)} chunks.")
         return {"message": f"File '{file.filename}' processed and stored successfully.", "chunks": len(documents)}
     except Exception as e:
+        logger.exception(f"Error processing file {file.filename}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+def has_documents(vectorstore: Chroma) -> bool:
+    data = vectorstore.get()
+    return bool(data and data.get("documents"))
+
 @app.get("/query")
 @limiter.limit("10/minute")
 async def query_documents(request: Request, query: str):
     try:
+        # Check if vectorstore has documents
+        if not has_documents(vectorstore):
+            logger.info("No documents found. Answering without retrieval.")
+            response = llm.invoke(query)
+            return {
+                "query": query,
+                "result": response.content,
+                "sources": [],
+                "num_sources": 0,
+                "memory_messages": 0
+            }
+
         retriever = get_local_retriever(vectorstore)
         
         qa_chain = ConversationalRetrievalChain.from_llm(
@@ -126,6 +176,8 @@ async def query_documents(request: Request, query: str):
             }
             sources.append(source_info)
         
+        logger.info(f"Query processed: '{query}' - Found {len(sources)} sources.")
+        
         return {
             "query": query,
             "result": response["answer"],
@@ -134,6 +186,7 @@ async def query_documents(request: Request, query: str):
             "memory_messages": len(memory.chat_memory.messages)
         }
     except Exception as e:
+        logger.exception(f"Error during query '{query}': {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 global_retriever = get_local_retriever(vectorstore)

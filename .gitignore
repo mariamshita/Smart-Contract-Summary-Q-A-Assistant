@@ -35,6 +35,7 @@ chroma_db/
 # Temporary Files
 temp_*
 *.log
+logs/
 .DS_Store
 
 # IDEs

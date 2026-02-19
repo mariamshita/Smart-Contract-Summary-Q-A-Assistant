@@ -20,7 +20,7 @@ A sophisticated RAG (Retrieval-Augmented Generation) system designed to analyze 
 ## 🛠️ Tech Stack
 
 - **Backend**: Python, [FastAPI](https://fastapi.tiangolo.com/), [LangChain](https://www.langchain.com/)
-- **LLM**: Google **Gemini 1.5 Flash** (via `langchain-google-genai`)
+- **LLM**: Google **Gemini 2.5 Flash** (via `langchain-google-genai`)
 - **Embeddings**: Google **text-embedding-004**
 - **Vector Store**: [ChromaDB](https://www.trychroma.com/) (Local)
 - **Reranker**: Sentence-Transformers (`ms-marco-MiniLM-L-6-v2`)
