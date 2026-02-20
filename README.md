@@ -4,16 +4,6 @@ A sophisticated RAG (Retrieval-Augmented Generation) system designed to analyze 
 
 ---
 
-## 📺 Demo
-
-<div align="center">
-  <video src="Demo_Project.mp4" width="100%" controls>
-    Your browser does not support the video tag.
-  </video>
-</div>
-
----
-
 ## ✨ Features
 
 - **Multi-Format Support**: Upload and analyze smart contracts in **PDF** or **DOCX** formats.
