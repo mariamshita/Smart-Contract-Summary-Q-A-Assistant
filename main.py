@@ -5,7 +5,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_classic.chains import RetrievalQA, ConversationalRetrievalChain
 from langchain_classic.memory import ConversationBufferWindowMemory
@@ -17,6 +18,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from utils import process_file
 from retrieval import get_local_retriever
+from evaluation import run_evaluation
 from langserve import add_routes
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -48,7 +50,9 @@ async def serve_frontend():
 
 langchain.llm_cache = SQLiteCache(database_path=".langchain.db")
 
-embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
 memory = ConversationBufferWindowMemory(
     k=5,
@@ -187,6 +191,19 @@ async def query_documents(request: Request, query: str):
         }
     except Exception as e:
         logger.exception(f"Error during query '{query}': {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/evaluate")
+async def evaluate_rag():
+    """
+    Endpoint to run the RAG evaluation suite.
+    """
+    try:
+        logger.info("Starting RAG evaluation...")
+        metrics = run_evaluation(llm, vectorstore)
+        return metrics
+    except Exception as e:
+        logger.exception(f"Evaluation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 global_retriever = get_local_retriever(vectorstore)

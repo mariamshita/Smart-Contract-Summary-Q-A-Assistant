@@ -1,0 +1,74 @@
+{
+  "rag_test_dataset": [
+    {
+      "id": 1,
+      "question": "What is the total contract value of the Smart Contract Development Agreement?",
+      "expected_answer": "The total contract value is USD $75,000 (seventy-five thousand US dollars), payable in six milestone-based installments.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 5 - Payment Terms"
+    },
+    {
+      "id": 2,
+      "question": "What programming language and version must be used for developing the smart contracts?",
+      "expected_answer": "All smart contracts must be written in Solidity, version 0.8.20 or higher, following the Checks-Effects-Interactions (CEI) pattern and OpenZeppelin security standards.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 2 - Obligations of the Service Provider"
+    },
+    {
+      "id": 3,
+      "question": "What is the cancellation fee if TechVentures Inc. cancels the project after Milestone 2?",
+      "expected_answer": "If the Client cancels the project after M2, the Client shall pay 50% of the remaining contract value as a cancellation fee.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 5 - Payment Terms"
+    },
+    {
+      "id": 4,
+      "question": "How many approvals are required for the multi-signature treasury wallet contract?",
+      "expected_answer": "The multi-signature treasury wallet contract requires 3-of-5 approvals for any fund release.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 1 - Purpose and Scope of Work"
+    },
+    {
+      "id": 5,
+      "question": "What is the minimum code coverage percentage required for the test suite?",
+      "expected_answer": "The Service Provider must achieve a minimum of 95% code coverage using Hardhat and Mocha test suites, including unit tests and integration tests on the Sepolia testnet.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 2 - Obligations of the Service Provider"
+    },
+    {
+      "id": 6,
+      "question": "What is the governing law and dispute resolution process for the Smart Contract Development Agreement?",
+      "expected_answer": "The Agreement is governed by the laws of the State of Delaware, USA. Disputes are first attempted through good-faith negotiation within 30 days. If unresolved, disputes are submitted to binding arbitration under the American Arbitration Association (AAA) rules in San Francisco, California.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 10 - Dispute Resolution and Governing Law"
+    },
+    {
+      "id": 7,
+      "question": "What are the payment methods accepted under the Smart Contract Development Agreement?",
+      "expected_answer": "Payments may be made in USD via bank wire transfer, or in USDC (ERC-20) to the Service Provider's designated wallet address. Payments must be made within 10 business days of the Client's written acceptance of each milestone deliverable.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 5 - Payment Terms"
+    },
+    {
+      "id": 8,
+      "question": "How long does the confidentiality obligation last after the termination of the Smart Contract Development Agreement?",
+      "expected_answer": "The confidentiality obligation survives the termination of the Agreement for a period of 3 years.",
+      "source": "SmartContract_Agreement.pdf",
+      "section": "Section 7 - Confidentiality"
+    },
+    {
+      "id": 9,
+      "question": "What is the duration of the NDA in the Sample Contracts document?",
+      "expected_answer": "The Non-Disclosure Agreement remains in effect for a period of two (2) years from the date of signing.",
+      "source": "Sample_Contracts_English.pdf",
+      "section": "Section 2 - Non-Disclosure Agreement"
+    },
+    {
+      "id": 10,
+      "question": "What is the relationship between the Service Provider and the Client under the Service Agreement in the Sample Contracts?",
+      "expected_answer": "The Service Provider is classified as an independent contractor and not an employee of the Client.",
+      "source": "Sample_Contracts_English.pdf",
+      "section": "Section 3 - Service Agreement"
+    }
+  ]
+}

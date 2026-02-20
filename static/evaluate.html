@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Evaluation Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7c3aed;
+            --primary-light: #a78bfa;
+            --primary-dark: #6d28d9;
+            --bg-dark: #050816;
+            --bg-card: rgba(15, 23, 42, 0.6);
+            --text-main: #e2e8f0;
+            --text-bright: #f8fafc;
+            --accent-green: #34d399;
+            --accent-red: #f87171;
+            --border: rgba(148, 163, 184, 0.1);
+            --radius: 20px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .ambient-bg {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        .blob {
+            position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.3;
+            animation: drift 20s infinite alternate ease-in-out;
+        }
+        .blob-1 { width: 400px; height: 400px; top: -10%; right: -5%; background: var(--primary); }
+        .blob-2 { width: 300px; height: 300px; bottom: 10%; left: 5%; background: var(--primary-dark); }
+
+        .container {
+            position: relative; z-index: 1; max-width: 1200px; margin: 0 auto;
+        }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem; font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, var(--primary-light) 100%);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .back-link {
+            text-decoration: none; color: var(--text-main); display: flex; align-items: center; gap: 8px;
+            font-weight: 500; transition: 0.3s;
+        }
+        .back-link:hover { color: var(--primary-light); }
+
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--bg-card); backdrop-filter: blur(20px); border: 1px solid var(--border);
+            padding: 30px; border-radius: var(--radius); text-align: center;
+        }
+
+        .stat-value { font-size: 3rem; font-weight: 800; margin-bottom: 8px; color: var(--text-bright); }
+        .stat-label { font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+
+        .run-btn {
+            background: var(--primary); color: white; border: none; padding: 16px 32px;
+            border-radius: 100px; font-weight: 600; font-family: inherit; cursor: pointer;
+            transition: 0.3s; box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
+            display: flex; align-items: center; gap: 10px; margin: 0 auto 40px;
+        }
+        .run-btn:hover { background: var(--primary-dark); transform: translateY(-2px); }
+        .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .results-table-container {
+            background: var(--bg-card); backdrop-filter: blur(20px); border: 1px solid var(--border);
+            border-radius: var(--radius); overflow: hidden;
+        }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 20px; background: rgba(255, 255, 255, 0.05); color: var(--primary-light); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; }
+        td { padding: 20px; border-top: 1px solid var(--border); vertical-align: top; }
+        
+        .score-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 100px; font-weight: 700; font-size: 0.9rem;
+        }
+        .score-high { background: rgba(52, 211, 153, 0.1); color: var(--accent-green); border: 1px solid rgba(52, 211, 153, 0.2); }
+        .score-med { background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.2); }
+        .score-low { background: rgba(248, 113, 113, 0.1); color: var(--accent-red); border: 1px solid rgba(248, 113, 113, 0.2); }
+
+        .loader {
+            display: none; width: 40px; height: 40px; border: 4px solid var(--border); border-top: 4px solid var(--primary);
+            border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes drift { from { transform: translate(0, 0); } to { transform: translate(20px, 20px); } }
+
+        .text-small { font-size: 0.85rem; color: #94a3b8; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <div class="ambient-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div>
+                <a href="/" class="back-link">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5m7 7l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Back to Assistant
+                </a>
+                <h1>RAG Evaluation</h1>
+            </div>
+            <button class="run-btn" id="runBtn" onclick="startEvaluation()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Run Test Suite
+            </button>
+        </header>
+
+        <div id="statsGrid" class="stats-grid" style="display: none;">
+            <div class="stat-card">
+                <div id="avgScore" class="stat-value">0.0</div>
+                <div class="stat-label">Avg Quality Score</div>
+            </div>
+            <div class="stat-card">
+                <div id="totalQ" class="stat-value">0</div>
+                <div class="stat-label">Total Questions</div>
+            </div>
+            <div class="stat-card">
+                <div id="execTime" class="stat-value">0s</div>
+                <div class="stat-label">Execution Time</div>
+            </div>
+        </div>
+
+        <div id="loader" class="loader"></div>
+
+        <div id="resultsTableContainer" class="results-table-container" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Question / Expected</th>
+                        <th>Actual RAG Output</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function startEvaluation() {
+            const btn = document.getElementById('runBtn');
+            const loader = document.getElementById('loader');
+            const stats = document.getElementById('statsGrid');
+            const table = document.getElementById('resultsTableContainer');
+            const body = document.getElementById('resultsBody');
+
+            btn.disabled = true;
+            btn.innerHTML = 'Testing in Progress...';
+            loader.style.display = 'block';
+            stats.style.display = 'none';
+            table.style.display = 'none';
+
+            try {
+                const response = await fetch('/evaluate');
+                const data = await response.json();
+
+                if (response.ok) {
+                    console.log('Evaluation Results:', data);
+                    // Update Stats
+                    document.getElementById('avgScore').innerText = (data.average_score || 0) + '/10';
+                    document.getElementById('totalQ').innerText = data.total_questions || 0;
+                    document.getElementById('execTime').innerText = (data.execution_time_sec || 0) + 's';
+                    
+                    // Populate Table
+                    body.innerHTML = '';
+                    if (data.results && Array.isArray(data.results)) {
+                        data.results.forEach(res => {
+                            if (!res) return;
+                            const tr = document.createElement('tr');
+                            
+                            let scoreClass = 'score-low';
+                            const score = res.score || 0;
+                            if (score >= 8) scoreClass = 'score-high';
+                            else if (score >= 5) scoreClass = 'score-med';
+
+                            const sources = res.sources || [];
+                            const question = res.question || 'Unknown Question';
+                            const expected = res.expected || 'N/A';
+                            const actual = res.actual || res.error || 'No output';
+
+                            tr.innerHTML = `
+                                <td>${res.id || '-'}</td>
+                                <td style="max-width:300px">
+                                    <strong>Q:</strong> ${question}
+                                    <div class="text-small"><strong>Expected:</strong> ${expected}</div>
+                                </td>
+                                <td style="max-width:400px">
+                                    ${actual}
+                                    <div class="text-small"><strong>Sources:</strong> ${Array.isArray(sources) ? sources.join(', ') : 'None'}</div>
+                                </td>
+                                <td><span class="score-badge ${scoreClass}">${score}</span></td>
+                            `;
+                            body.appendChild(tr);
+                        });
+                    }
+
+                    stats.style.display = 'grid';
+                    table.style.display = 'block';
+                } else {
+                    alert('Evaluation failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg> Run Test Suite';
+                loader.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
